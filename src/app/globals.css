@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Base Layer
+   ============================================ */
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-background-app text-on-surface;
+  }
+
+  /* Minimalist Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-container-highest rounded;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-outline-variant;
+  }
+}
+
+/* ============================================
+   Component Layer
+   ============================================ */
+@layer components {
+  /* Shadow utilities */
+  .shadow-ambient {
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.05);
+  }
+
+  .shadow-overlay {
+    box-shadow: 0px 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Card base */
+  .card {
+    @apply bg-surface-container-lowest border border-outline-variant rounded-lg shadow-ambient;
+  }
+
+  /* KPI value */
+  .kpi-value {
+    font-size: 36px;
+    line-height: 44px;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+
+  /* Data table header */
+  .table-header {
+    @apply bg-[#F1F5F9] border-b border-outline-variant;
+  }
+
+  .table-header th {
+    @apply py-3 px-6 text-xs font-medium text-secondary uppercase tracking-wider;
+  }
+
+  /* Table rows */
+  .table-row {
+    @apply hover:bg-primary/5 transition-colors border-b border-outline-variant/30;
+  }
+
+  /* Sidebar nav link */
+  .nav-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded text-on-secondary-container font-medium hover:bg-surface-container-high transition-colors;
+  }
+
+  .nav-link-active {
+    @apply text-primary font-bold border-r-4 border-primary bg-primary-container/10;
+  }
+
+  /* Badge / Chip */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* Segmented control */
+  .seg-btn {
+    @apply px-4 py-1.5 rounded text-xs text-body-grey hover:text-on-surface transition-colors cursor-pointer;
+  }
+
+  .seg-btn-active {
+    @apply bg-surface-container-high text-secondary font-semibold shadow-sm;
+  }
+
+  /* Loading skeleton */
+  .skeleton {
+    @apply animate-pulse bg-surface-container-high rounded;
+  }
+
+  /* Input field */
+  .input-field {
+    @apply block w-full px-3 py-2 border border-outline-variant rounded bg-surface-bright text-on-surface text-sm
+           focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors
+           placeholder:text-outline;
+  }
+}
