@@ -1,0 +1,145 @@
+// This is your Prisma schema file
+// https://www.prisma.io/docs/concepts/components/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Roles & Users
+// ============================================
+
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // super_admin, owner, accountant, operator, viewer
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  roleId    Int
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  role             Role      @relation(fields: [roleId], references: [id])
+  journalsCreated  Journal[] @relation("JournalCreatedBy")
+
+  @@map("users")
+}
+
+// ============================================
+// Chart of Accounts (COA)
+// ============================================
+
+enum AccountCategory {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum NormalBalance {
+  DEBIT
+  CREDIT
+}
+
+model Account {
+  id            Int             @id @default(autoincrement())
+  code          String          @unique
+  name          String
+  category      AccountCategory
+  normalBalance NormalBalance
+  parentId      Int?
+  isActive      Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  parent         Account?        @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children       Account[]       @relation("AccountHierarchy")
+  journalEntries JournalEntry[]
+  ledgerEntries  GeneralLedger[]
+
+  @@map("accounts")
+}
+
+// ============================================
+// Journal (Jurnal Umum)
+// ============================================
+
+enum JournalStatus {
+  DRAFT
+  POSTED
+  VOID
+}
+
+model Journal {
+  id              Int           @id @default(autoincrement())
+  journalNumber   String        @unique
+  transactionDate DateTime      @db.Date
+  referenceNumber String?
+  description     String        @db.Text
+  status          JournalStatus @default(DRAFT)
+  createdById     Int
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  createdBy     User           @relation("JournalCreatedBy", fields: [createdById], references: [id])
+  entries       JournalEntry[]
+  ledgerEntries GeneralLedger[]
+
+  @@map("journals")
+}
+
+model JournalEntry {
+  id          Int     @id @default(autoincrement())
+  journalId   Int
+  accountId   Int
+  debit       Decimal @default(0) @db.Decimal(20, 2)
+  credit      Decimal @default(0) @db.Decimal(20, 2)
+  description String? @db.Text
+  createdAt   DateTime @default(now())
+
+  journal       Journal         @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  account       Account         @relation(fields: [accountId], references: [id])
+  ledgerEntries GeneralLedger[] @relation("LedgerFromEntry")
+
+  @@map("journal_entries")
+}
+
+// ============================================
+// General Ledger (Buku Besar)
+// ============================================
+
+model GeneralLedger {
+  id              Int      @id @default(autoincrement())
+  accountId       Int
+  journalId       Int
+  journalEntryId  Int
+  transactionDate DateTime @db.Date
+  description     String?  @db.Text
+  debit           Decimal  @default(0) @db.Decimal(20, 2)
+  credit          Decimal  @default(0) @db.Decimal(20, 2)
+  runningBalance  Decimal  @default(0) @db.Decimal(20, 2)
+  createdAt       DateTime @default(now())
+
+  account      Account      @relation(fields: [accountId], references: [id])
+  journal      Journal      @relation(fields: [journalId], references: [id])
+  journalEntry JournalEntry @relation("LedgerFromEntry", fields: [journalEntryId], references: [id])
+
+  @@index([accountId, transactionDate])
+  @@map("general_ledger")
+}
