@@ -58,5 +58,11 @@ backup/
 docker-compose*.yml
 nginx/
 
+# ─── Deployment scripts (run on host, not inside container) ──────────────────
+deploy/
+
+# ─── TypeScript incremental cache ────────────────────────────────────────────
+tsconfig.tsbuildinfo
+
 # ─── README (optional, saves a few bytes) ────────────────────────────────────
 README.md

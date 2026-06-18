@@ -3,7 +3,7 @@ services:
   # ── MySQL 8 ───────────────────────────────────────────────────────────────
   mysql:
     image: mysql:8.0
-    container_name: beinsoft_mysql
+    container_name: beinsoft_accounting_mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -13,7 +13,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
-      - beinsoft_net
+      - beinsoft_accounting_net
     healthcheck:
       test:
         - CMD
@@ -28,15 +28,15 @@ services:
       timeout:  5s
       retries:  10
       start_period: 40s
-    # MySQL port intentionally NOT exposed to host — access via nginx/app only
+    # MySQL port NOT exposed to host — only accessible within Docker network
 
   # ── Next.js App ────────────────────────────────────────────────────────────
   app:
     build:
       context:    .
       dockerfile: Dockerfile
-    image: beinsoft-app:latest
-    container_name: beinsoft_app
+    image: beinsoft-accounting:latest
+    container_name: beinsoft_accounting_app
     restart: unless-stopped
     environment:
       NODE_ENV:     production
@@ -45,7 +45,7 @@ services:
       mysql:
         condition: service_healthy
     networks:
-      - beinsoft_net
+      - beinsoft_accounting_net
     healthcheck:
       test:
         - CMD-SHELL
@@ -54,22 +54,26 @@ services:
       timeout:  10s
       retries:  3
       start_period: 60s
-    # App port intentionally NOT exposed to host — access via nginx only
+    # App port NOT exposed to host — only accessible via nginx
 
   # ── Nginx reverse proxy ────────────────────────────────────────────────────
   nginx:
     image: nginx:1.26-alpine
-    container_name: beinsoft_nginx
+    container_name: beinsoft_accounting_nginx
     restart: unless-stopped
     ports:
       - "80:80"
+      # Uncomment after SSL cert setup:
+      # - "443:443"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      # Uncomment after SSL cert setup (certbot puts certs here):
+      # - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       app:
         condition: service_healthy
     networks:
-      - beinsoft_net
+      - beinsoft_accounting_net
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/ || exit 1"]
       interval: 30s
@@ -83,5 +87,5 @@ volumes:
 
 # ── Networks ─────────────────────────────────────────────────────────────────
 networks:
-  beinsoft_net:
+  beinsoft_accounting_net:
     driver: bridge
