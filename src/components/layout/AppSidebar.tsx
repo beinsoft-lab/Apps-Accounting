@@ -2,15 +2,20 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { 
-  LayoutDashboard, 
-  BarChart2, 
-  Users, 
-  Settings, 
-  HelpCircle, 
+import {
+  LayoutDashboard,
+  BarChart2,
+  Users,
+  Settings,
+  HelpCircle,
   LogOut,
   FileText,
-  PieChart as PieChartIcon
+  PieChart as PieChartIcon,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Landmark,
+  Receipt,
+  ClipboardList,
 } from 'lucide-react'
 import { useAuth } from '@/providers/AuthProvider'
 
@@ -71,6 +76,41 @@ export function AppSidebar() {
           >
             <PieChartIcon className="w-5 h-5" />
             <span>Buku Besar</span>
+          </Link>
+          <Link
+            href="/accounting/kas-masuk"
+            className={`nav-link ${isActive('/accounting/kas-masuk') ? 'nav-link-active' : ''}`}
+          >
+            <ArrowDownToLine className="w-5 h-5" />
+            <span>Kas Masuk</span>
+          </Link>
+          <Link
+            href="/accounting/kas-keluar"
+            className={`nav-link ${isActive('/accounting/kas-keluar') ? 'nav-link-active' : ''}`}
+          >
+            <ArrowUpFromLine className="w-5 h-5" />
+            <span>Kas Keluar</span>
+          </Link>
+          <Link
+            href="/accounting/piutang"
+            className={`nav-link ${isActive('/accounting/piutang') ? 'nav-link-active' : ''}`}
+          >
+            <Landmark className="w-5 h-5" />
+            <span>Piutang</span>
+          </Link>
+          <Link
+            href="/accounting/hutang"
+            className={`nav-link ${isActive('/accounting/hutang') ? 'nav-link-active' : ''}`}
+          >
+            <Receipt className="w-5 h-5" />
+            <span>Hutang</span>
+          </Link>
+          <Link
+            href="/accounting/invoice"
+            className={`nav-link ${isActive('/accounting/invoice') ? 'nav-link-active' : ''}`}
+          >
+            <ClipboardList className="w-5 h-5" />
+            <span>Invoice</span>
           </Link>
         </div>
 

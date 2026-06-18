@@ -153,6 +153,254 @@ export interface RolesData {
 }
 
 // ============================================
+// Cash Transaction Types
+// ============================================
+
+export type CashType = 'IN' | 'OUT'
+export type JournalStatus = 'DRAFT' | 'POSTED' | 'VOID'
+
+export interface CashAccountRef {
+  id:       number
+  code:     string
+  name:     string
+  category?: string
+}
+
+export interface CashTransaction {
+  id:                  number
+  transactionNumber:   string
+  type:                CashType
+  transactionDate:     string
+  amount:              string
+  description:         string
+  referenceNumber?:    string
+  partyName?:          string
+  cashAccount:         CashAccountRef
+  counterpartAccount:  CashAccountRef
+  journal: {
+    id:            number
+    journalNumber: string
+    status:        JournalStatus
+  }
+  createdAt: string
+}
+
+export interface CashListResponse {
+  data: CashTransaction[]
+  meta: {
+    total:          number
+    page:           number
+    limit:          number
+    totalPages:     number
+    totalAmountIn:  number
+    totalAmountOut: number
+  }
+  success: boolean
+}
+
+// ============================================
+// Receivable (Piutang) Types
+// ============================================
+
+export type ReceivableStatus = 'OPEN' | 'PARTIAL' | 'PAID' | 'VOID'
+
+export interface ReceivableAccountRef {
+  id:       number
+  code:     string
+  name:     string
+  category?: string
+}
+
+export interface ReceivablePayment {
+  id:          number
+  receivableId: number
+  paymentDate: string
+  amount:      string
+  description: string | null
+  cashAccount: ReceivableAccountRef
+  journal: {
+    id:            number
+    journalNumber: string
+    status:        JournalStatus
+  }
+  createdAt: string
+}
+
+export interface Receivable {
+  id:               number
+  receivableNumber: string
+  customerName:     string
+  description:      string
+  referenceNumber?: string | null
+  amount:           string
+  paidAmount:       string
+  remainingAmount:  string
+  dueDate:          string
+  status:           ReceivableStatus
+  receivableAccount: ReceivableAccountRef
+  journal: {
+    id:            number
+    journalNumber: string
+    status:        JournalStatus
+  }
+  payments: ReceivablePayment[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ReceivableListResponse {
+  data: Receivable[]
+  meta: {
+    total:          number
+    page:           number
+    limit:          number
+    totalPages:     number
+    totalAmount:    number
+    totalPaid:      number
+    totalRemaining: number
+  }
+  success: boolean
+}
+
+// ============================================
+// Payable (Hutang) Types
+// ============================================
+
+export type PayableStatus = 'OPEN' | 'PARTIAL' | 'PAID' | 'VOID'
+
+export interface PayablePayment {
+  id:          number
+  payableId:   number
+  paymentDate: string
+  amount:      string
+  description: string | null
+  cashAccount: ReceivableAccountRef
+  journal: {
+    id:            number
+    journalNumber: string
+    status:        JournalStatus
+  }
+  createdAt: string
+}
+
+export interface Payable {
+  id:             number
+  payableNumber:  string
+  vendorName:     string
+  description:    string
+  referenceNumber?: string | null
+  amount:         string
+  paidAmount:     string
+  remainingAmount: string
+  dueDate:        string
+  status:         PayableStatus
+  payableAccount: ReceivableAccountRef
+  journal: {
+    id:            number
+    journalNumber: string
+    status:        JournalStatus
+  }
+  payments:  PayablePayment[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PayableListResponse {
+  data: Payable[]
+  meta: {
+    total:          number
+    page:           number
+    limit:          number
+    totalPages:     number
+    totalAmount:    number
+    totalPaid:      number
+    totalRemaining: number
+  }
+  success: boolean
+}
+
+// ============================================
+// Invoice (Faktur Penjualan) Types
+// ============================================
+
+export type InvoiceStatus = 'DRAFT' | 'SENT' | 'PARTIAL' | 'PAID' | 'VOID'
+
+export interface InvoiceItem {
+  id:          number
+  invoiceId:   number
+  description: string
+  quantity:    string
+  unitPrice:   string
+  amount:      string
+  createdAt:   string
+}
+
+export interface InvoicePayment {
+  id:           number
+  invoiceId:    number
+  paymentDate:  string
+  amount:       string
+  description:  string | null
+  cashAccount:  { id: number; code: string; name: string }
+  journal: {
+    id:            number
+    journalNumber: string
+    status:        JournalStatus
+  }
+  createdAt: string
+}
+
+export interface Invoice {
+  id:              number
+  invoiceNumber:   string
+  customerName:    string
+  customerAddress: string | null
+  customerEmail:   string | null
+  customerPhone:   string | null
+  invoiceDate:     string
+  dueDate:         string
+  notes:           string | null
+  taxRate:         string
+  subtotal:        string
+  taxAmount:       string
+  totalAmount:     string
+  paidAmount:      string
+  remainingAmount: string
+  status:          InvoiceStatus
+  receivableAccount: { id: number; code: string; name: string; category?: string }
+  revenueAccount:    { id: number; code: string; name: string; category?: string }
+  journal?: {
+    id:            number
+    journalNumber: string
+    status:        JournalStatus
+    entries?: Array<{
+      id:      number
+      account: { id: number; code: string; name: string }
+      debit:   string
+      credit:  string
+    }>
+  } | null
+  items:    InvoiceItem[]
+  payments: InvoicePayment[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface InvoiceListResponse {
+  data: Invoice[]
+  meta: {
+    total:          number
+    page:           number
+    limit:          number
+    totalPages:     number
+    totalAmount:    number
+    totalPaid:      number
+    totalRemaining: number
+  }
+  success: boolean
+}
+
+// ============================================
 // API Response Types
 // ============================================
 

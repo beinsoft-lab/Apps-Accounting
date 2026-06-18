@@ -34,8 +34,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  role             Role      @relation(fields: [roleId], references: [id])
-  journalsCreated  Journal[] @relation("JournalCreatedBy")
+  role                    Role              @relation(fields: [roleId], references: [id])
+  journalsCreated         Journal[]         @relation("JournalCreatedBy")
+  cashTransactionsCreated CashTransaction[] @relation("CashTxCreator")
+  receivablesCreated      Receivable[]      @relation("ReceivableCreator")
+  payablesCreated         Payable[]         @relation("PayableCreator")
+  invoicesCreated         Invoice[]         @relation("InvoiceCreator")
 
   @@map("users")
 }
@@ -73,6 +77,16 @@ model Account {
   journalEntries JournalEntry[]
   ledgerEntries  GeneralLedger[]
 
+  cashTransactionsCash        CashTransaction[]  @relation("CashTxCashAcct")
+  cashTransactionsCounterpart CashTransaction[]  @relation("CashTxCounterAcct")
+  receivables                 Receivable[]       @relation("ReceivableAcct")
+  receivablePayments          ReceivablePayment[] @relation("PaymentCashAcct")
+  payables                    Payable[]          @relation("PayableAcct")
+  payablePayments             PayablePayment[]   @relation("PayablePmtCashAcct")
+  invoicesReceivable          Invoice[]          @relation("InvoiceReceivableAcct")
+  invoicesRevenue             Invoice[]          @relation("InvoiceRevenueAcct")
+  invoicePayments             InvoicePayment[]   @relation("InvoicePmtCashAcct")
+
   @@map("accounts")
 }
 
@@ -97,9 +111,16 @@ model Journal {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  createdBy     User           @relation("JournalCreatedBy", fields: [createdById], references: [id])
-  entries       JournalEntry[]
-  ledgerEntries GeneralLedger[]
+  createdBy          User              @relation("JournalCreatedBy", fields: [createdById], references: [id])
+  entries            JournalEntry[]
+  ledgerEntries      GeneralLedger[]
+  cashTransaction    CashTransaction?
+  receivable         Receivable?        @relation("ReceivableJournal")
+  receivablePayment  ReceivablePayment? @relation("PaymentJournal")
+  payable            Payable?           @relation("PayableJournal")
+  payablePayment     PayablePayment?    @relation("PayablePmtJournal")
+  invoice            Invoice?           @relation("InvoiceJournal")
+  invoicePayment     InvoicePayment?    @relation("InvoicePaymentJournal")
 
   @@map("journals")
 }
@@ -142,4 +163,277 @@ model GeneralLedger {
 
   @@index([accountId, transactionDate])
   @@map("general_ledger")
+}
+
+// ============================================
+// Cash Transactions (Kas Masuk & Kas Keluar)
+// ============================================
+
+enum CashType {
+  IN
+  OUT
+}
+
+model CashTransaction {
+  id                   Int      @id @default(autoincrement())
+  transactionNumber    String   @unique
+  // KM-YYYYMMDD-NNNN (IN) | KK-YYYYMMDD-NNNN (OUT)
+
+  type                 CashType
+  transactionDate      DateTime @db.Date
+  amount               Decimal  @db.Decimal(20, 2)
+
+  cashAccountId        Int
+  // Must be ASSET category, leaf account (no children), isActive=true
+
+  counterpartAccountId Int
+  // Any category, leaf account, isActive=true. Must differ from cashAccountId.
+
+  description          String   @db.Text
+  referenceNumber      String?
+  partyName            String?
+  // IN:  "Diterima dari ..."   OUT: "Dibayar kepada ..."
+
+  journalId            Int      @unique
+  // 1:1 — every CashTransaction owns exactly one auto-generated Journal
+  // FK lives here so journals table has zero new columns
+
+  createdById          Int      @default(1)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  cashAccount          Account  @relation("CashTxCashAcct",    fields: [cashAccountId],        references: [id])
+  counterpartAccount   Account  @relation("CashTxCounterAcct", fields: [counterpartAccountId], references: [id])
+  journal              Journal  @relation(fields: [journalId], references: [id])
+  createdBy            User     @relation("CashTxCreator",     fields: [createdById], references: [id])
+
+  @@index([type, transactionDate])
+  @@index([cashAccountId])
+  @@map("cash_transactions")
+}
+
+// ============================================
+// Receivables (Piutang)
+// ============================================
+
+enum ReceivableStatus {
+  OPEN
+  PARTIAL
+  PAID
+  VOID
+}
+
+model Receivable {
+  id               Int              @id @default(autoincrement())
+  receivableNumber String           @unique
+  // PR-YYYYMMDD-NNNN
+
+  customerName     String
+  description      String           @db.Text
+  referenceNumber  String?
+  amount           Decimal          @db.Decimal(20, 2)
+  paidAmount       Decimal          @default(0) @db.Decimal(20, 2)
+  remainingAmount  Decimal          @db.Decimal(20, 2)
+  dueDate          DateTime         @db.Date
+  status           ReceivableStatus @default(OPEN)
+
+  receivableAccountId Int
+  // Must be ASSET category (Piutang Usaha account) — used for payment credit side
+
+  journalId        Int              @unique
+  // Creation journal: Debit Piutang Usaha, Credit Pendapatan
+
+  createdById      Int              @default(1)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  receivableAccount Account           @relation("ReceivableAcct",    fields: [receivableAccountId], references: [id])
+  journal           Journal           @relation("ReceivableJournal", fields: [journalId],           references: [id])
+  createdBy         User              @relation("ReceivableCreator", fields: [createdById],          references: [id])
+  payments          ReceivablePayment[]
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([customerName])
+  @@map("receivables")
+}
+
+model ReceivablePayment {
+  id           Int      @id @default(autoincrement())
+  receivableId Int
+  paymentDate  DateTime @db.Date
+  amount       Decimal  @db.Decimal(20, 2)
+  cashAccountId Int
+  // ASSET account receiving the cash (Kas / Bank)
+  description  String?  @db.Text
+  journalId    Int      @unique
+  // Payment journal: Debit Kas, Credit Piutang Usaha
+  createdAt    DateTime @default(now())
+
+  receivable  Receivable @relation(fields: [receivableId], references: [id])
+  cashAccount Account    @relation("PaymentCashAcct", fields: [cashAccountId], references: [id])
+  journal     Journal    @relation("PaymentJournal",  fields: [journalId],     references: [id])
+
+  @@index([receivableId])
+  @@map("receivable_payments")
+}
+
+// ============================================
+// Payables (Hutang)
+// ============================================
+
+enum PayableStatus {
+  OPEN
+  PARTIAL
+  PAID
+  VOID
+}
+
+model Payable {
+  id             Int           @id @default(autoincrement())
+  payableNumber  String        @unique
+  // HP-YYYYMMDD-NNNN
+
+  vendorName     String
+  description    String        @db.Text
+  referenceNumber String?
+  amount         Decimal       @db.Decimal(20, 2)
+  paidAmount     Decimal       @default(0) @db.Decimal(20, 2)
+  remainingAmount Decimal      @db.Decimal(20, 2)
+  dueDate        DateTime      @db.Date
+  status         PayableStatus @default(OPEN)
+
+  payableAccountId Int
+  // Must be LIABILITY category (Hutang Usaha) — used for payment debit side
+
+  journalId      Int           @unique
+  // Creation journal: Debit Biaya/Expense, Credit Hutang Usaha
+
+  createdById    Int           @default(1)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  payableAccount Account        @relation("PayableAcct",    fields: [payableAccountId], references: [id])
+  journal        Journal        @relation("PayableJournal", fields: [journalId],        references: [id])
+  createdBy      User           @relation("PayableCreator", fields: [createdById],      references: [id])
+  payments       PayablePayment[]
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([vendorName])
+  @@map("payables")
+}
+
+model PayablePayment {
+  id           Int      @id @default(autoincrement())
+  payableId    Int
+  paymentDate  DateTime @db.Date
+  amount       Decimal  @db.Decimal(20, 2)
+  cashAccountId Int
+  // ASSET account used to pay (Kas / Bank)
+  description  String?  @db.Text
+  journalId    Int      @unique
+  // Payment journal: Debit Hutang Usaha, Credit Kas
+  createdAt    DateTime @default(now())
+
+  payable     Payable  @relation(fields: [payableId],     references: [id])
+  cashAccount Account  @relation("PayablePmtCashAcct", fields: [cashAccountId], references: [id])
+  journal     Journal  @relation("PayablePmtJournal",  fields: [journalId],     references: [id])
+
+  @@index([payableId])
+  @@map("payable_payments")
+}
+
+// ============================================
+// Invoices (Faktur Penjualan)
+// ============================================
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIAL
+  PAID
+  VOID
+}
+
+model Invoice {
+  id              Int           @id @default(autoincrement())
+  invoiceNumber   String        @unique
+  // INV-YYYYMMDD-NNNN
+
+  customerName    String
+  customerAddress String?       @db.Text
+  customerEmail   String?
+  customerPhone   String?
+
+  invoiceDate     DateTime      @db.Date
+  dueDate         DateTime      @db.Date
+  notes           String?       @db.Text
+
+  taxRate         Decimal       @default(0) @db.Decimal(5, 2)
+  subtotal        Decimal       @db.Decimal(20, 2)
+  taxAmount       Decimal       @db.Decimal(20, 2)
+  totalAmount     Decimal       @db.Decimal(20, 2)
+  paidAmount      Decimal       @default(0) @db.Decimal(20, 2)
+  remainingAmount Decimal       @db.Decimal(20, 2)
+
+  status          InvoiceStatus @default(DRAFT)
+
+  receivableAccountId Int
+  // Must be ASSET (Piutang Usaha) — Dr side on approve, Cr side on payment
+  revenueAccountId    Int
+  // Any leaf account — Cr side on approve
+
+  journalId       Int?          @unique
+  // Null on DRAFT; created + posted when action=approve
+
+  createdById     Int           @default(1)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items             InvoiceItem[]
+  payments          InvoicePayment[]
+  receivableAccount Account         @relation("InvoiceReceivableAcct", fields: [receivableAccountId], references: [id])
+  revenueAccount    Account         @relation("InvoiceRevenueAcct",    fields: [revenueAccountId],    references: [id])
+  journal           Journal?        @relation("InvoiceJournal",        fields: [journalId],           references: [id])
+  createdBy         User            @relation("InvoiceCreator",        fields: [createdById],         references: [id])
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([customerName])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          Int      @id @default(autoincrement())
+  invoiceId   Int
+  description String   @db.Text
+  quantity    Decimal  @db.Decimal(10, 2)
+  unitPrice   Decimal  @db.Decimal(20, 2)
+  amount      Decimal  @db.Decimal(20, 2)
+  createdAt   DateTime @default(now())
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model InvoicePayment {
+  id            Int      @id @default(autoincrement())
+  invoiceId     Int
+  paymentDate   DateTime @db.Date
+  amount        Decimal  @db.Decimal(20, 2)
+  cashAccountId Int
+  description   String?  @db.Text
+  journalId     Int      @unique
+  // Payment journal: Dr Kas / Cr receivableAccount
+  createdAt     DateTime @default(now())
+
+  invoice     Invoice  @relation(fields: [invoiceId],     references: [id])
+  cashAccount Account  @relation("InvoicePmtCashAcct",   fields: [cashAccountId], references: [id])
+  journal     Journal  @relation("InvoicePaymentJournal", fields: [journalId],     references: [id])
+
+  @@index([invoiceId])
+  @@map("invoice_payments")
 }

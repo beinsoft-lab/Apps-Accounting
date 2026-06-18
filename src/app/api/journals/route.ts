@@ -1,35 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Decimal } from '@prisma/client/runtime/library'
-
-// ============================================================
-// POSTING ENGINE — The Core of the Accounting System
-// ============================================================
-// Converts a DRAFT Journal into POSTED status and simultaneously
-// creates GeneralLedger rows within a single Prisma Transaction.
-// If any step fails, the ENTIRE operation rolls back.
-// ============================================================
+import { generateJournalNumber } from '@/lib/accounting'
 
 interface JournalEntryInput {
   accountId: number
   debit: number
   credit: number
   description?: string
-}
-
-// Auto-generate journal number: JNL-YYYYMMDD-NNNN
-async function generateJournalNumber(): Promise<string> {
-  const today = new Date()
-  const datePart = today.toISOString().slice(0, 10).replace(/-/g, '')
-  const startOfDay = new Date(today.setHours(0, 0, 0, 0))
-  const endOfDay = new Date(today.setHours(23, 59, 59, 999))
-
-  const count = await prisma.journal.count({
-    where: { createdAt: { gte: startOfDay, lte: endOfDay } },
-  })
-
-  const seq = String(count + 1).padStart(4, '0')
-  return `JNL-${datePart}-${seq}`
 }
 
 // Validate entries balance: sum(debit) must equal sum(credit)
