@@ -1,0 +1,87 @@
+services:
+
+  # ── MySQL 8 ───────────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: beinsoft_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE:      ${MYSQL_DATABASE}
+      MYSQL_USER:          ${MYSQL_USER}
+      MYSQL_PASSWORD:      ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - beinsoft_net
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - -h
+        - localhost
+        - -u
+        - root
+        - --password=${MYSQL_ROOT_PASSWORD}
+      interval: 10s
+      timeout:  5s
+      retries:  10
+      start_period: 40s
+    # MySQL port intentionally NOT exposed to host — access via nginx/app only
+
+  # ── Next.js App ────────────────────────────────────────────────────────────
+  app:
+    build:
+      context:    .
+      dockerfile: Dockerfile
+    image: beinsoft-app:latest
+    container_name: beinsoft_app
+    restart: unless-stopped
+    environment:
+      NODE_ENV:     production
+      DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - beinsoft_net
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -q -O /dev/null http://localhost:3000/ || exit 1
+      interval: 30s
+      timeout:  10s
+      retries:  3
+      start_period: 60s
+    # App port intentionally NOT exposed to host — access via nginx only
+
+  # ── Nginx reverse proxy ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.26-alpine
+    container_name: beinsoft_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - beinsoft_net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/ || exit 1"]
+      interval: 30s
+      timeout:  5s
+      retries:  3
+
+# ── Volumes ──────────────────────────────────────────────────────────────────
+volumes:
+  mysql_data:
+    driver: local
+
+# ── Networks ─────────────────────────────────────────────────────────────────
+networks:
+  beinsoft_net:
+    driver: bridge

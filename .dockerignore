@@ -1,0 +1,62 @@
+# ─── Build artifacts ──────────────────────────────────────────────────────────
+.next/
+out/
+build/
+dist/
+
+# ─── Dependencies (reinstalled in Docker) ────────────────────────────────────
+node_modules/
+
+# ─── Environment & secrets ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Local dev databases ──────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+prisma/*.db
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+dev.log
+npm-debug.log*
+
+# ─── OS & editor files ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ─── AI workspace ─────────────────────────────────────────────────────────────
+.claude/
+.cursor/
+.windsurf/
+CLAUDE.md
+AGENTS.md
+
+# ─── Git ──────────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ─── Test & coverage ──────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+
+# ─── Temporary ────────────────────────────────────────────────────────────────
+*.tmp
+*.temp
+*.bak
+tmp/
+temp/
+backup/
+
+# ─── Docker files (not needed inside the image) ───────────────────────────────
+docker-compose*.yml
+nginx/
+
+# ─── README (optional, saves a few bytes) ────────────────────────────────────
+README.md
