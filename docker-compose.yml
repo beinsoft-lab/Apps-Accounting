@@ -41,6 +41,8 @@ services:
     environment:
       NODE_ENV:     production
       DATABASE_URL: mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE}
+      HOSTNAME:     "0.0.0.0"
+      PORT:         "3000"
     depends_on:
       mysql:
         condition: service_healthy
