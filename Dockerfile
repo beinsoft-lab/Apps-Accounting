@@ -66,6 +66,9 @@ COPY --from=builder /app/node_modules/.prisma   ./node_modules/.prisma
 # standalone/node_modules only has runtime deps — prisma CLI is not included.
 COPY --from=builder /app/node_modules/prisma    ./node_modules/prisma
 
+# ── Prisma Engines ────────────────────────────────────────────────────────
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
 # ── Prisma: migration files ────────────────────────────────────────────────
 COPY --from=builder /app/prisma ./prisma
 
