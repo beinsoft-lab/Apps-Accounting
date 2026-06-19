@@ -64,6 +64,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static    ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public          ./public
 
+# ── Next.js 16 standalone keepalive patch ─────────────────────────────────
+# Next.js 16's startServer() spawns request-handling worker processes and then
+# resolves its startup Promise, leaving the main Node.js process (PID 1) with
+# an empty event loop. Node exits cleanly (code 0), Docker kills the workers,
+# and the container restarts in a loop despite the app appearing to start fine.
+# This setInterval keeps PID 1's event loop alive indefinitely. It fires once
+# every ~24 days, so it has zero observable runtime cost.
+RUN printf ';\nsetInterval(function keepAlive(){}, 2147483647);\n' >> /app/server.js
+
 # ── Prisma: generated client with native query engine binary ───────────────
 # Not traced by Next.js standalone — must be copied explicitly.
 # chown is mandatory: nextjs user must be able to read (and in some Prisma
